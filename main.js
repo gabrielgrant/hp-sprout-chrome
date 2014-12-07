@@ -1,5 +1,22 @@
 
 var CAMERA_PIXELS_PER_SCREEN_PIXEL = 4;
+function applyTransform(e){
+	var e = $(e);
+	var x = e.data('x')|| 0;
+	var y = e.data('y')|| 0;
+	var scale = e.data('scale')|| 1;
+	console.log(e.data('x'), x);
+	console.log(scale, x, y);
+	var transform = 'matrix(' + [scale, 0, 0, scale, x, y].join(', ') + ')';
+	console.log(transform);
+	e.css({
+	  '-webkit-transform' : transform,
+	  '-moz-transform'    : transform,
+	  '-ms-transform'     : transform,
+	  '-o-transform'      : transform,
+	  'transform'         : transform
+	});
+}
 $(function(){
 	$('.capture').click(function(){
 		$.getJSON('http://localhost:55881/capture', function(data){
@@ -21,31 +38,35 @@ $(function(){
 				var x = rawX * i.metadata.PixelDensity.X / CAMERA_PIXELS_PER_SCREEN_PIXEL;
 				var rawY = i.metadata.PhysicalBoundaries.Location.Y;
 				var y = rawY * i.metadata.PixelDensity.Y / CAMERA_PIXELS_PER_SCREEN_PIXEL;
-				var transform = 'translate(' + x + 'px, ' + y + 'px)';
-				var rawImgEl = imgEl.get(0);
-				rawImgEl.style.webkitTransform = rawImgEl.style.transform = transform;
-
-				// update the posiion attributes
-				rawImgEl.setAttribute('data-x', x);
-				rawImgEl.setAttribute('data-y', y);
-				console.log(x, y);
-				console.log(rawImgEl);
-				console.log(rawImgEl === imgEl.get(0));
+				imgEl.data('x', x);
+				imgEl.data('y', y);
+				applyTransform(imgEl);
 				interact(imgEl.get(0)).draggable({
 					onmove: function(event){
 						var target = event.target,
 							// keep the dragged position in the data-x/data-y attributes
-							x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx,
-							y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
-
-						// translate the element
+							x = ($(target).data('x') || 0) + event.dx,
+							y = ($(target).data('y') || 0) + event.dy;
+						// update the position attributes
+						$(target).data('x', x);
+						$(target).data('y', y);
+						console.log(target);
+						applyTransform(target);
+					}
+				})
+				.inertia(true)
+				.restrict({
+					drag: "parent",
+					endOnly: true,
+					elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
+				})
+				.gesturable({
+					onmove: function(event){
+						var target = event.target;
+						var scale = ($(target).data('scale') || 1) + event.ds;
+						$(target).data('scale', scale);
 						target.style.webkitTransform =
-						target.style.transform =
-							'translate(' + x + 'px, ' + y + 'px)';
-
-						// update the posiion attributes
-						target.setAttribute('data-x', x);
-						target.setAttribute('data-y', y);
+						applyTransform(target);
 					}
 				});
 			});
